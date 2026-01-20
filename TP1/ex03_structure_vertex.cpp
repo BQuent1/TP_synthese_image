@@ -1,9 +1,11 @@
 #include <string>
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
+#include <cstddef>
 #include <glad/glad.h>
 #include <glimac/FilePath.hpp>
 #include <glimac/Program.hpp>
+#include <glimac/glm.hpp>
 #include <iostream>
 
 int window_width = 800;
@@ -32,6 +34,17 @@ static void size_callback(GLFWwindow * /*window*/, int width, int height) {
   window_width = width;
   window_height = height;
 }
+
+struct Vertex2DColor {
+  glm::vec2 position;
+  glm::vec3 color;
+
+  Vertex2DColor() {}
+  Vertex2DColor(glm::vec2 pos, glm::vec3 col) {
+    Vertex2DColor::position = pos;
+    Vertex2DColor::color = col;
+  }
+};
 
 int main(int argc, char **argv) {
   /* Initialize the library */
@@ -85,12 +98,14 @@ int main(int argc, char **argv) {
   // glGenBuffers(16, vbos);
 
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
-  GLfloat vertices[] = {
-      -0.5f, -0.5f, 0.8f, 0.5f, 0.f,  // premier sommet
-      0.5f,  -0.5f, 0.f,  0.3f, 0.8f, // deuxième sommet
-      0.0f,  0.5f,  0.6f, 0.f,  1.f   // troisième sommet
-  };
-  glBufferData(GL_ARRAY_BUFFER, 15 * sizeof(GLfloat), vertices, GL_STATIC_DRAW);
+
+  Vertex2DColor vertices[] = {
+      Vertex2DColor(glm::vec2(-0.5, -0.5), glm::vec3(1, 0, 0)),
+      Vertex2DColor(glm::vec2(0.5, -0.5), glm::vec3(0, 1, 0)),
+      Vertex2DColor(glm::vec2(0, 0.5), glm::vec3(0, 0, 1))};
+
+  glBufferData(GL_ARRAY_BUFFER, 3 * sizeof(Vertex2DColor), vertices,
+               GL_STATIC_DRAW);
   glBindBuffer(GL_ARRAY_BUFFER, 0);
 
   GLuint vao;
@@ -100,21 +115,19 @@ int main(int argc, char **argv) {
   const GLuint VERTEX_ATTR_POSITION = 3;
   const GLuint VERTEX_ATTR_COLOR = 8;
 
-  // Définit l'offset pour la couleur (saute les 2 premiers floats de position)
-  const GLvoid *colorOffset = (const GLvoid *)(2 * sizeof(GLfloat));
-
   glEnableVertexAttribArray(VERTEX_ATTR_POSITION);
   glEnableVertexAttribArray(VERTEX_ATTR_COLOR);
 
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
-  // Position : 2 composantes, stride de 5 floats, commence à 0
+  // Position
   glVertexAttribPointer(VERTEX_ATTR_POSITION, 2, GL_FLOAT, GL_FALSE,
-                        5 * sizeof(GLfloat), 0);
+                        sizeof(Vertex2DColor), (const GLvoid *)0);
 
-  // Couleur : 3 composantes, stride de 5 floats, commence après la position
+  // Couleur
   glVertexAttribPointer(VERTEX_ATTR_COLOR, 3, GL_FLOAT, GL_FALSE,
-                        5 * sizeof(GLfloat), colorOffset);
+                        sizeof(Vertex2DColor),
+                        (const GLvoid *)(sizeof(glm::vec2)));
 
   glBindBuffer(GL_ARRAY_BUFFER, 0);
 
