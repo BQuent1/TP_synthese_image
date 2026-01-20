@@ -2,6 +2,8 @@
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 #include <glad/glad.h>
+#include <glimac/FilePath.hpp>
+#include <glimac/Program.hpp>
 #include <iostream>
 
 int window_width = 800;
@@ -31,7 +33,7 @@ static void size_callback(GLFWwindow * /*window*/, int width, int height) {
   window_height = height;
 }
 
-int main() {
+int main(int argc, char **argv) {
   /* Initialize the library */
   if (!glfwInit()) {
     return -1;
@@ -60,6 +62,12 @@ int main() {
     return -1;
   }
 
+  glimac::FilePath applicationPath(argv[0]);
+  glimac::Program program = glimac::loadProgram(
+      applicationPath.dirPath() + "TP1/shaders/triangle.vs.glsl",
+      applicationPath.dirPath() + "TP1/shaders/triangle.fs.glsl");
+  program.use();
+
   /* Hook input callbacks */
   glfwSetKeyCallback(window, &key_callback);
   glfwSetMouseButtonCallback(window, &mouse_button_callback);
@@ -77,23 +85,38 @@ int main() {
   // glGenBuffers(16, vbos);
 
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
-  GLfloat vertices[] = {-0.5f, -0.5f, 0.5f, -0.5f, 0.0f, 0.5f};
-  glBufferData(GL_ARRAY_BUFFER, 6 * sizeof(GLfloat), vertices, GL_STATIC_DRAW);
+  GLfloat vertices[] = {
+      -0.5f, -0.5f, 1.f, 0.f, 0.f, // premier sommet
+      0.5f,  -0.5f, 0.f, 1.f, 0.f, // deuxième sommet
+      0.0f,  0.5f,  0.f, 0.f, 1.f  // troisième sommet
+  };
+  glBufferData(GL_ARRAY_BUFFER, 15 * sizeof(GLfloat), vertices, GL_STATIC_DRAW);
   glBindBuffer(GL_ARRAY_BUFFER, 0);
 
   GLuint vao;
   glGenVertexArrays(1, &vao);
   glBindVertexArray(vao);
 
-  const GLuint VERTEX_ATTR_POSITION = 0;
+  const GLuint VERTEX_ATTR_POSITION = 3;
+  const GLuint VERTEX_ATTR_COLOR = 8;
+
+  // Définit l'offset pour la couleur (saute les 2 premiers floats de position)
+  const GLvoid *colorOffset = (const GLvoid *)(2 * sizeof(GLfloat));
+
   glEnableVertexAttribArray(VERTEX_ATTR_POSITION);
+  glEnableVertexAttribArray(VERTEX_ATTR_COLOR);
 
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
-  glVertexAttribPointer(VERTEX_ATTR_POSITION, 2, GL_FLOAT, GL_FALSE,
-                        2 * sizeof(GLfloat), 0);
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-  glBindVertexArray(0);
+  // Position : 2 composantes, stride de 5 floats, commence à 0
+  glVertexAttribPointer(VERTEX_ATTR_POSITION, 2, GL_FLOAT, GL_FALSE,
+                        5 * sizeof(GLfloat), 0);
+
+  // Couleur : 3 composantes, stride de 5 floats, commence après la position
+  glVertexAttribPointer(VERTEX_ATTR_COLOR, 3, GL_FLOAT, GL_FALSE,
+                        5 * sizeof(GLfloat), colorOffset);
+
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
 
   /* Loop until the user closes the window */
   while (!glfwWindowShouldClose(window)) {
