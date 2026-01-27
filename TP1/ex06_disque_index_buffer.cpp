@@ -1,3 +1,14 @@
+// dans l'exercice d'avant ce qui était chiant c'est qu'on envoyait beaucoup de
+// sommets au GPU et qu'il y avait beaucoup de redondance (même sommet envoyé
+// plusieurs fois) ici on va utiliser un index buffer (IBO) pour n'envoyer
+// qu'une seule fois chaque sommet on prend une liste de tous les sommets notés
+// une seule fois, on assigne un indice à chacun de ces sommets. ces indices
+// sont stockés dans un index buffer (IBO) qui est envoyé au GPU. donc au lieu
+// d'envoyer des sommets (des trucs de 5 élémenets: 2 pour la position, 3 pour
+// la couleur), on envoie des indices
+// qui sont eux aussi redondants mais qui prennent moins de place (un entier au
+// lieu de 5 flottants)
+
 #include "glm/fwd.hpp"
 #include "glm/trigonometric.hpp"
 #include <string>
@@ -95,7 +106,7 @@ int main(int argc, char **argv) {
    * HERE SHOULD COME THE INITIALIZATION CODE
    *********************************/
 
-  int N{10};    // nbr subdivisions
+  int N{50};    // nbr subdivisions
   float R{1.0}; // radius
   float teta{(2 * glm::pi<float>()) / N};
   float angle{0};
@@ -107,25 +118,47 @@ int main(int argc, char **argv) {
 
   std::vector<Vertex2DColor> vertices;
 
+  // un seul exemplaire du chaque sommet
+  // un sommet au centre
+  vertices.push_back(Vertex2DColor(glm::vec2(0, 0), glm::vec3(1, 0, 0)));
+  // un sommet à 0 degres
   vertices.push_back(Vertex2DColor(glm::vec2(R, 0), glm::vec3(1, 0, 0)));
+  // boucles pour les autres
   for (int i{0}; i < N - 1; i++) {
     angle += teta;
     float x = R * glm::cos(angle);
     float y = R * glm::sin(angle);
-    vertices.push_back(Vertex2DColor(glm::vec2(0, 0), glm::vec3(1, 0, 0)));
     vertices.push_back(Vertex2DColor(glm::vec2(x, y), glm::vec3(0, 1, 0)));
-    vertices.push_back(Vertex2DColor(glm::vec2(x, y), glm::vec3(0, 0, 1)));
   }
-  vertices.push_back(Vertex2DColor(glm::vec2(0, 0), glm::vec3(1, 0, 0)));
-  vertices.push_back(Vertex2DColor(glm::vec2(R, 0), glm::vec3(1, 0, 0)));
 
   glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex2DColor),
                vertices.data(), GL_STATIC_DRAW);
   glBindBuffer(GL_ARRAY_BUFFER, 0);
 
+  GLuint ibo;
+  glGenBuffers(1, &ibo);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+
+  // tableau des indices de taille 3*N
+  std::vector<uint32_t> indices(N * 3);
+
+  for (int i{1}; i <= N; i++) {
+    indices[(i - 1) * 3 + 0] = 0; // centre
+    indices[(i - 1) * 3 + 1] = i; // point i
+    indices[(i - 1) * 3 + 2] = (i % N) + 1;
+  }
+
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, N * 3 * sizeof(uint32_t),
+               indices.data(), GL_STATIC_DRAW);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
   GLuint vao;
   glGenVertexArrays(1, &vao);
   glBindVertexArray(vao);
+
+  // => On bind l'IBO sur GL_ELEMENT_ARRAY_BUFFER; puisqu'un VAO est
+  // actuellement bindé, cela a pour effet d'enregistrer l'IBO dans le VAO
+  glad_glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
 
   const GLuint VERTEX_ATTR_POSITION = 3;
   const GLuint VERTEX_ATTR_COLOR = 8;
@@ -155,7 +188,9 @@ int main(int argc, char **argv) {
      *********************************/
 
     glBindVertexArray(vao);
-    glDrawArrays(GL_TRIANGLES, 0, vertices.size());
+
+    glDrawElements(GL_TRIANGLES, N * 3, GL_UNSIGNED_INT, 0);
+
     glBindVertexArray(0);
 
     /* Swap front and back buffers */
