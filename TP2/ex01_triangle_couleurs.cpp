@@ -1,14 +1,9 @@
-#include "glm/fwd.hpp"
-#include "glm/trigonometric.hpp"
 #include <string>
-#include <vector>
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
-#include <cstddef>
 #include <glad/glad.h>
 #include <glimac/FilePath.hpp>
 #include <glimac/Program.hpp>
-#include <glimac/glm.hpp>
 #include <iostream>
 
 int window_width = 800;
@@ -37,17 +32,6 @@ static void size_callback(GLFWwindow * /*window*/, int width, int height) {
   window_width = width;
   window_height = height;
 }
-
-struct Vertex2DColor {
-  glm::vec2 position;
-  glm::vec3 color;
-
-  Vertex2DColor() {}
-  Vertex2DColor(glm::vec2 pos, glm::vec3 col) {
-    Vertex2DColor::position = pos;
-    Vertex2DColor::color = col;
-  }
-};
 
 int main(int argc, char **argv) {
   /* Initialize the library */
@@ -80,8 +64,8 @@ int main(int argc, char **argv) {
 
   glimac::FilePath applicationPath(argv[0]);
   glimac::Program program = glimac::loadProgram(
-      applicationPath.dirPath() + "TP1/shaders/triangle.vs.glsl",
-      applicationPath.dirPath() + "TP1/shaders/triangle.fs.glsl");
+      applicationPath.dirPath() + "TP2/shaders/color2D.vs.glsl",
+      applicationPath.dirPath() + "TP2/shaders/color2D.fs.glsl");
   program.use();
 
   /* Hook input callbacks */
@@ -95,54 +79,42 @@ int main(int argc, char **argv) {
    * HERE SHOULD COME THE INITIALIZATION CODE
    *********************************/
 
-  int N{10};    // nbr subdivisions
-  float R{1.0}; // radius
-  float teta{(2 * glm::pi<float>()) / N};
-  float angle{0};
-
   GLuint vbo;
   glGenBuffers(1, &vbo);
+  // GLuint vbos[16];
+  // glGenBuffers(16, vbos);
 
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
-
-  std::vector<Vertex2DColor> vertices;
-
-  vertices.push_back(Vertex2DColor(glm::vec2(R, 0), glm::vec3(1, 0, 0)));
-  for (int i{0}; i < N - 1; i++) {
-    angle += teta;
-    float x = R * glm::cos(angle);
-    float y = R * glm::sin(angle);
-    vertices.push_back(Vertex2DColor(glm::vec2(0, 0), glm::vec3(1, 0, 0)));
-    vertices.push_back(Vertex2DColor(glm::vec2(x, y), glm::vec3(0, 1, 0)));
-    vertices.push_back(Vertex2DColor(glm::vec2(x, y), glm::vec3(0, 0, 1)));
-  }
-  vertices.push_back(Vertex2DColor(glm::vec2(0, 0), glm::vec3(1, 0, 0)));
-  vertices.push_back(Vertex2DColor(glm::vec2(R, 0), glm::vec3(1, 0, 0)));
-
-  glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex2DColor),
-               vertices.data(), GL_STATIC_DRAW);
+  GLfloat vertices[] = {
+      -0.5f, -0.5f, 0.8f, 0.5f, 0.f,  // premier sommet
+      0.5f,  -0.5f, 0.f,  0.3f, 0.8f, // deuxième sommet
+      0.0f,  0.5f,  0.6f, 0.f,  1.f   // troisième sommet
+  };
+  glBufferData(GL_ARRAY_BUFFER, 15 * sizeof(GLfloat), vertices, GL_STATIC_DRAW);
   glBindBuffer(GL_ARRAY_BUFFER, 0);
 
   GLuint vao;
   glGenVertexArrays(1, &vao);
   glBindVertexArray(vao);
 
-  const GLuint VERTEX_ATTR_POSITION = 3;
-  const GLuint VERTEX_ATTR_COLOR = 8;
+  const GLuint VERTEX_ATTR_POSITION = 0;
+  const GLuint VERTEX_ATTR_COLOR = 1;
+
+  // Définit l'offset pour la couleur (saute les 2 premiers floats de position)
+  const GLvoid *colorOffset = (const GLvoid *)(2 * sizeof(GLfloat));
 
   glEnableVertexAttribArray(VERTEX_ATTR_POSITION);
   glEnableVertexAttribArray(VERTEX_ATTR_COLOR);
 
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
-  // Position
+  // Position : 2 composantes, stride de 5 floats, commence à 0
   glVertexAttribPointer(VERTEX_ATTR_POSITION, 2, GL_FLOAT, GL_FALSE,
-                        sizeof(Vertex2DColor), (const GLvoid *)0);
+                        5 * sizeof(GLfloat), 0);
 
-  // Couleur
+  // Couleur : 3 composantes, stride de 5 floats, commence après la position
   glVertexAttribPointer(VERTEX_ATTR_COLOR, 3, GL_FLOAT, GL_FALSE,
-                        sizeof(Vertex2DColor),
-                        (const GLvoid *)(sizeof(glm::vec2)));
+                        5 * sizeof(GLfloat), colorOffset);
 
   glBindBuffer(GL_ARRAY_BUFFER, 0);
 
@@ -155,7 +127,7 @@ int main(int argc, char **argv) {
      *********************************/
 
     glBindVertexArray(vao);
-    glDrawArrays(GL_TRIANGLES, 0, vertices.size());
+    glDrawArrays(GL_TRIANGLES, 0, 3);
     glBindVertexArray(0);
 
     /* Swap front and back buffers */

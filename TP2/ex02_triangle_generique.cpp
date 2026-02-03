@@ -2,6 +2,8 @@
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 #include <glad/glad.h>
+#include <glimac/FilePath.hpp>
+#include <glimac/Program.hpp>
 #include <iostream>
 
 int window_width = 800;
@@ -31,9 +33,17 @@ static void size_callback(GLFWwindow * /*window*/, int width, int height) {
   window_height = height;
 }
 
-int main() {
+int main(int argc, char **argv) {
   /* Initialize the library */
   if (!glfwInit()) {
+    return -1;
+  }
+
+  if (argc < 3) {
+    // On affiche un message clair au lieu de crasher
+    std::cerr << "Erreur : Arguments manquants !" << std::endl;
+    std::cerr << "Usage : " << argv[0] << " " << argv[1] << " " << argv[2]
+              << " <vertex_shader> <fragment_shader>" << std::endl;
     return -1;
   }
 
@@ -60,6 +70,12 @@ int main() {
     return -1;
   }
 
+  glimac::FilePath applicationPath(argv[0]);
+  glimac::Program program =
+      glimac::loadProgram(applicationPath.dirPath() + "TP2/shaders/" + argv[1],
+                          applicationPath.dirPath() + "TP2/shaders/" + argv[2]);
+  program.use();
+
   /* Hook input callbacks */
   glfwSetKeyCallback(window, &key_callback);
   glfwSetMouseButtonCallback(window, &mouse_button_callback);
@@ -71,6 +87,45 @@ int main() {
    * HERE SHOULD COME THE INITIALIZATION CODE
    *********************************/
 
+  GLuint vbo;
+  glGenBuffers(1, &vbo);
+  // GLuint vbos[16];
+  // glGenBuffers(16, vbos);
+
+  glBindBuffer(GL_ARRAY_BUFFER, vbo);
+  GLfloat vertices[] = {
+      -0.5f, -0.5f, 0.8f, 0.5f, 0.f,  // premier sommet
+      0.5f,  -0.5f, 0.f,  0.3f, 0.8f, // deuxième sommet
+      0.0f,  0.5f,  0.6f, 0.f,  1.f   // troisième sommet
+  };
+  glBufferData(GL_ARRAY_BUFFER, 15 * sizeof(GLfloat), vertices, GL_STATIC_DRAW);
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+  GLuint vao;
+  glGenVertexArrays(1, &vao);
+  glBindVertexArray(vao);
+
+  const GLuint VERTEX_ATTR_POSITION = 0;
+  const GLuint VERTEX_ATTR_COLOR = 1;
+
+  // Définit l'offset pour la couleur (saute les 2 premiers floats de position)
+  const GLvoid *colorOffset = (const GLvoid *)(2 * sizeof(GLfloat));
+
+  glEnableVertexAttribArray(VERTEX_ATTR_POSITION);
+  glEnableVertexAttribArray(VERTEX_ATTR_COLOR);
+
+  glBindBuffer(GL_ARRAY_BUFFER, vbo);
+
+  // Position : 2 composantes, stride de 5 floats, commence à 0
+  glVertexAttribPointer(VERTEX_ATTR_POSITION, 2, GL_FLOAT, GL_FALSE,
+                        5 * sizeof(GLfloat), 0);
+
+  // Couleur : 3 composantes, stride de 5 floats, commence après la position
+  glVertexAttribPointer(VERTEX_ATTR_COLOR, 3, GL_FLOAT, GL_FALSE,
+                        5 * sizeof(GLfloat), colorOffset);
+
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+
   /* Loop until the user closes the window */
   while (!glfwWindowShouldClose(window)) {
     glClearColor(1.f, 0.5f, 0.5f, 1.f);
@@ -79,6 +134,10 @@ int main() {
      * HERE SHOULD COME THE RENDERING CODE
      *********************************/
 
+    glBindVertexArray(vao);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+    glBindVertexArray(0);
+
     /* Swap front and back buffers */
     glfwSwapBuffers(window);
     /* Poll for and process events */
@@ -86,5 +145,8 @@ int main() {
   }
 
   glfwTerminate();
+
+  glDeleteBuffers(1, &vbo);
+  glDeleteVertexArrays(1, &vao);
   return 0;
 }
