@@ -128,7 +128,8 @@ int main(int argc, char **argv) {
 
   /* Loop until the user closes the window */
   while (!glfwWindowShouldClose(window)) {
-    glClearColor(1.f, 0.5f, 0.5f, 1.f);
+    // couleur de fond
+    glClearColor(0.f, 0.f, 0.f, 1.f);
     glClear(GL_COLOR_BUFFER_BIT);
     /*********************************
      * HERE SHOULD COME THE RENDERING CODE

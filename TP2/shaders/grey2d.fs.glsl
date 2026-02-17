@@ -5,5 +5,6 @@ in vec3 vFragColor;
 out vec3 fFragColor;
 
 void main() {
-  fFragColor = vec3((vFragColor.x + vFragColor.y + vFragColor.z)/3);
-};
+  // Conversion en niveaux de gris par moyenne
+  fFragColor = vec3(vFragColor.r + vFragColor.g + vFragColor.b) / 3.0;
+}

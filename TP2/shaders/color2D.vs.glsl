@@ -33,6 +33,7 @@ mat3 rotate(float angle) {
 
 void main() {
   vFragColor = aVertexColor;
-  //déplacer le triangle selon (0.5,0.5) et le réduire de moitié
-  gl_Position = vec4(translate(0.5,0.5) * scale(0.5,0.5) * vec3(aVertexPosition, 1.0), 1.0);
+  
+  gl_Position = vec4(aVertexPosition, 0, 1);
+  // vec4(rotate(radians(45.0)) * translate(0.5,0.0) * scale(0.5,0.5) * vec3(aVertexPosition, 1.0), 1.0);
 };
